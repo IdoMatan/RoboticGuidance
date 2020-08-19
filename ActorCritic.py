@@ -61,7 +61,7 @@ class Trainer:
         num_outputs = self.env.action_space.n
 
         if load:
-            loaded = torch.load('actor_critic.pth')
+            loaded = torch.load('guidance_model.pth')
             actor_critic = loaded['model']
             actor_critic.load_state_dict(loaded['model_state_dict'])
             ac_optimizer = optim.Adam(actor_critic.parameters(), lr=learning_rate)
@@ -94,7 +94,7 @@ class Trainer:
         ac_loss.backward()
         self.optimizer.step()
 
-    def save_model(self, filename='guidance_model'):
+    def save_model(self, filename='guidance_model.pth'):
         torch.save({'model': self.actor_critic,
                     'model_state_dict': self.actor_critic.state_dict(),
                     'optimizer_state_dict': self.optimizer.state_dict(),
