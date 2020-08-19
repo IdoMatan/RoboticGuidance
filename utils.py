@@ -11,7 +11,7 @@ import math
 from math import *
 # from scipy.misc import imsave
 import imageio
-import cv2
+# import cv2
 
 from abc import ABC, abstractmethod
 from path_planner import *
@@ -237,13 +237,14 @@ def get_state_vector(drone, car, planner=None):
     relative_heading = calc_relative_heading(drone_euler=drone_orientation.to_euler(degrees=True),
                                              car_euler=car_orientation.to_euler(degrees=True))
 
+    drone_speed = np.linalg.norm(drone_vel)
     try:
         los = 1 if planner.X.collision_free(drone_pose[:2], car_pose[:2], planner.r) else 0
     except Exception:
         print('planner not defined yet')
         los = -1
 
-    state_vec = [relative_dist, relative_vel, relative_heading, los]
+    state_vec = [relative_dist, relative_vel, relative_heading, drone_speed, los]
     state_dict['drone'] = {'pose': drone_pose, 'velocity': drone_vel, 'orientation': drone_orientation}
     state_dict['car'] = {'pose': car_pose, 'velocity': car_vel, 'orientation': car_orientation}
     return state_vec, state_dict

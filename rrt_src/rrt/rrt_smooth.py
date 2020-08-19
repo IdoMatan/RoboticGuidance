@@ -1,5 +1,5 @@
-from computer_vision.rrt_src.rrt.rrt_base import RRTBase
-from computer_vision.rrt_src.utilities.geometry import calc_angle_cost
+from rrt_src.rrt.rrt_base import RRTBase
+from rrt_src.utilities.geometry import calc_angle_cost
 import numpy as np
 
 
