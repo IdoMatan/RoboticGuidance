@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from computer_vision.graph import *
+from graph import *
 from shapely.geometry import LineString
 import cv2
 
@@ -263,7 +263,7 @@ def path_planning(map_lim=[-128, 128, -72, 72],  # map_lim=np.array([(-500, 500)
         best_distance = 100000
         rrt = None
 
-        for episode in range(10):
+        for episode in range(5):
 
             rrt = RRTSmooth(X, Q, x_init, x_goal, max_samples, r, theta_tol=max_allowed_angle, prc=prc)
             path = rrt.rrt_search()
