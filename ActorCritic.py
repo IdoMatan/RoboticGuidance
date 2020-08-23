@@ -1,7 +1,6 @@
 import time
 import sys
 import torch
-# import gym
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
@@ -9,6 +8,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from ResNet import *
 from utils import *
+import json
 
 # TODO make hyperparameters as a json_config file
 hidden_size = 256
@@ -120,7 +120,7 @@ class Environment:
         self.car = car
         self.car_current_position = init_pose
         self.planner = planner
-        self.goals = goals
+        self.goals = [(goal[1], goal[0]) for goal in goals]
         self.current_goal = self.goals.pop(0)
         self.drone.current_goal = self.current_goal
         self.dt = 0
@@ -139,13 +139,18 @@ class Environment:
         time.sleep(delay)
         self.state = self.get_state()
 
-        if self.drone.dist(self.current_goal) < 1:
+        if self.drone.dist(self.current_goal) < 2:
 
-            self.current_goal = self.goals.pop(0)
-            self.drone.current_goal = self.current_goal
-            done = True if not len(self.goals) else False  # will be true if finished all milestones
-            reward = self.calc_reward(done, milestone=True)
-            print('Flying to next goal:', self.current_goal)
+            if len(self.goals):
+                self.current_goal = self.goals.pop(0)
+                self.drone.current_goal = self.current_goal
+                done = False
+                reward = self.calc_reward(done, milestone=True)
+                print('===========>>>  Flying to next goal:', self.current_goal)
+            else:
+                done = True
+                reward = self.calc_reward(done, milestone=True)
+                print('===========>>>  Reached destination goal!:', self.current_goal)
 
         else:
             done = False
@@ -173,7 +178,7 @@ class Environment:
         state_vec, state_dict = get_state_vector(self.drone, self.car, self.planner)
         self.drone.current_pose = state_dict['drone']['pose']
         self.car.current_pose = state_dict['car']['pose']
-
+        print(f'Drone pose: {self.drone.current_pose}, Car pose: {self.car.current_pose}')
         return state_vec
 
 
@@ -195,7 +200,7 @@ class Episode:
         self.log(experience)
 
     def log(self, experience):
-        self.logger.info(str(experience.as_dict()))
+        self.logger.info(json.dumps(experience.as_dict()))
 
     def __len__(self):
         return len(self.experiences)
@@ -226,7 +231,7 @@ class Experience:
         return {'episode': self.episode,
                 'state': self.state,
                 'action': self.action,
-                'reward': self.reward,
+                'reward': float(round(self.reward, 2)),
                 'next_state': self.next_state}
 
 

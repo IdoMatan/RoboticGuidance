@@ -37,7 +37,8 @@ class RRTSmooth(RRTBase):
                 angle = calc_angle_cost(grand_parent, parent, child)
                 # print('angle:', angle)
         except:
-            print(" Execption ---- > can't get angle")
+            pass
+            # print(" Execption ---- > can't get angle")
 
         if self.trees[tree].V.count(x_b) == 0 and self.X.collision_free(x_a, x_b, self.r) and angle < self.theta_tol:
             self.add_vertex(tree, x_b)

@@ -19,8 +19,8 @@ class Drone:
         self.client.enableApiControl(True, self.name)
         self.client.armDisarm(True, self.name)
 
-    def move(self, pos, yaw):
-        self.client.simSetVehiclePose(airsim.Pose(airsim.Vector3r(pos[0], pos[1], pos[2]), airsim.to_quaternion(0, 0, yaw)),
+    def move(self, pos, yaw, offset_x=0, offset_y=0):
+        self.client.simSetVehiclePose(airsim.Pose(airsim.Vector3r(pos[0]+offset_x, pos[1]+offset_y, pos[2]), airsim.to_quaternion(0, 0, yaw)),
                                       True, vehicle_name=self.name)
 
     def set_speed(self, speed):
@@ -29,8 +29,8 @@ class Drone:
         :arg speed: scalar value between 0-1 (0 is hover in place)
         '''
         height_default = -2
-        speed_const = 10
-        self.client.enableApiControl(True, self.name)
+        speed_const = 12
+        # self.client.enableApiControl(True, self.name)
         self.client.moveToPositionAsync(*self.current_goal, height_default, speed*speed_const, vehicle_name=self.name)
 
     def dist(self, position):
@@ -56,6 +56,7 @@ class Drone:
     def disconnect(self):
         self.client.armDisarm(False, self.name)
         self.client.enableApiControl(False, self.name)
+        print(f'{self.name} - disconnected')
 
 
 class Car:
@@ -71,10 +72,10 @@ class Car:
         self.client.confirmConnection()
         # self.client.enableApiControl(True, self.name)
 
-    def move(self, pos, yaw):
+    def move(self, pos, yaw, offset_x=0, offset_y=0):
         # pos Z coordinate is overriden to -1 (or 0, need to test)
         self.client.enableApiControl(True, self.name)
-        self.client.simSetVehiclePose(airsim.Pose(airsim.Vector3r(pos[0], pos[1], 0), airsim.to_quaternion(0, 0, yaw)),
+        self.client.simSetVehiclePose(airsim.Pose(airsim.Vector3r(pos[0]+offset_x, pos[1]+offset_y, 0), airsim.to_quaternion(0, 0, yaw)),
                                       True, vehicle_name=self.name)
         self.client.enableApiControl(False, self.name)
 
@@ -87,3 +88,5 @@ class Car:
     def disconnect(self):
         self.client.armDisarm(False, self.name)
         self.client.enableApiControl(False, self.name)
+        print(f'{self.name} - disconnected')
+

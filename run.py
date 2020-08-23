@@ -4,7 +4,7 @@ import airsim
 from ActorCritic import *
 from utils import *
 from vehicles import Car, Drone
-
+import json
 
 def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.98*2), hfov = radians(90), coll_thres=5, yaw=0,
               limit_yaw=5, step=0.1):
@@ -22,7 +22,7 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
 
     # --- send vehicle and drone to initial positions (random at each game/episode) ------------------------------
     drone.move(pos, yaw)
-    car.move(pos, yaw)
+    car.move(pos, yaw, offset_x=-4)
 
     # ------------------------------------------------------------------------------------------------------------
     env = Environment(init_pose=pos, drone=drone, car=car, planner=planner, goals=goals)
@@ -37,7 +37,7 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
 
     # --- Start Game ---------------------------------------------------------------------------------------------
     total_entropy = 0
-    limit = 30
+    limit = 120
     count_down = 10
     done = False
 
@@ -60,7 +60,7 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
 
         if done:
             print('Target reached.')
-            episode.logger.info('target_reached')
+            episode.logger.info(json.dumps({'episode': episode.uuid, 'state':'target_reached'}))
             count_down -= 1
             if not count_down:
                 break
@@ -71,7 +71,7 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
 
     if done:
         print('Drone Reached Final Target')
-        episode.logger.info('final_target_reached')
+        episode.logger.info(json.dumps({'episode': episode.uuid, 'state': 'final_target_reached'}))
 
     print('Running training phase')
     trainer.train(episode, state, total_entropy)
@@ -84,8 +84,10 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
 
 if __name__ == '__main__':
     episode_uuid = round(time.time())
-    logger = setup_logger('logger', 'episodes', f'episode_{episode_uuid}_{time.strftime("%a,%d_%b_%Y_%H_%M_%S")}.txt')
-    logger.info(f'Episode: {episode_uuid} - START -')
+    logger = setup_logger('logger', 'episodes', f'episode_{episode_uuid}_{time.strftime("%a,%d_%b_%Y_%H_%M_%S")}.json')
+    logger.info(json.dumps({"episode": episode_uuid, "state": "START"}))
 
     play_game(logger, episode_uuid)
-    logger.info('GAME_END')
+    logger.info(json.dumps({"episode": episode_uuid, 'state': 'GAME_END'}))
+
+    exit('Game Ended')
