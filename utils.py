@@ -9,8 +9,8 @@ import pprint
 import tempfile
 import math
 from math import *
-# from scipy.misc import imsave
 import imageio
+import json
 # import cv2
 
 from abc import ABC, abstractmethod
@@ -244,7 +244,7 @@ def get_state_vector(drone, car, planner=None):
         print('planner not defined yet')
         los = -1
 
-    state_vec = [relative_dist, relative_vel, relative_heading, drone_speed, los]
+    state_vec = [relative_dist, relative_vel, relative_heading, float(drone_speed), los]
     state_dict['drone'] = {'pose': drone_pose, 'velocity': drone_vel, 'orientation': drone_orientation}
     state_dict['car'] = {'pose': car_pose, 'velocity': car_vel, 'orientation': car_orientation}
     return state_vec, state_dict
@@ -252,7 +252,10 @@ def get_state_vector(drone, car, planner=None):
 
 def setup_logger(name, dir_name, log_file, level=logging.INFO):
     """To setup as many loggers as you want"""
-    formatter = logging.Formatter('%(asctime)s,%(name)s,%(levelname)s,%(message)s')
+    # formatter = logging.Formatter('%(asctime)s,%(name)s,%(levelname)s,%(message)s')
+    formatter = logging.Formatter("{'time':'%(asctime)s', 'name': '%(name)s',"
+                                  "'level': '%(levelname)s', 'message': '%(message)s'}"
+    )
     if not os.path.exists(f'./{dir_name}/'):
         os.makedirs(f'./{dir_name}/')
 
@@ -266,4 +269,19 @@ def setup_logger(name, dir_name, log_file, level=logging.INFO):
     logger.addHandler(handler)
 
     return logger
+
+
+class EpisodeParser:
+    def __init__(self,dir_path, time_interval):
+        self.path = dir_path
+        self.interval = time_interval
+        self.episodes = []
+
+    def load_episodes(self):
+        files = os.listdir(self.path)
+        print(files)
+        for file in files:
+            with open(os.path.join(self.path, file)) as episode:
+                self.episodes.append(json.loads(episode))
+                print(self.episodes[-1])
 

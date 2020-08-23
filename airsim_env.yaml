@@ -1,0 +1,20 @@
+name: PathPlanner
+#channels:
+#  - conda-forge
+#  - defaults
+#  - mro
+dependencies:
+  - matplotlib
+  - pandas=0.24.*
+  - python=3.7.*
+  - numpy
+  - matplotlib
+  - pytorch
+  - pip=19.*
+  - pip:
+      - msgpackrpc
+      - imagio
+      - pytz
+      - pyproj
+      - opencv-python
+      - shapely
