@@ -125,9 +125,9 @@ class Environment:
         self.drone.current_goal = self.current_goal
         self.dt = 0
 
-    def reset(self, pose, yaw):
-        self.drone.move(pose, yaw)
-        self.car.move(pose, yaw)
+    def reset(self, pose, yaw, offset_car=(0,0), offset_drone=(0,0)):
+        self.drone.move(pose, yaw, offset_x=offset_drone[0], offset_y=offset_drone[1])
+        self.car.move(pose, yaw, offset_x=offset_car[0], offset_y=offset_car[1])
 
         self.state = self.get_state()
         return self.state
@@ -145,22 +145,22 @@ class Environment:
                 self.current_goal = self.goals.pop(0)
                 self.drone.current_goal = self.current_goal
                 done = False
-                reward = self.calc_reward(done, milestone=True)
+                reward, done = self.calc_reward(done, milestone=True)
                 print('===========>>>  Flying to next goal:', self.current_goal)
             else:
                 done = True
-                reward = self.calc_reward(done, milestone=True)
+                reward, done = self.calc_reward(done, milestone=True)
                 print('===========>>>  Reached destination goal!:', self.current_goal)
 
         else:
             done = False
-            reward = self.calc_reward(done, milestone=False)
+            reward, done = self.calc_reward(done, milestone=False)
 
         return self.state, reward, done, None
 
     def calc_reward(self, is_done, milestone):
 
-        reward = -self.dt
+        reward = -self.dt    # accumulating penalty
 
         reward -= (self.state[0] + self.state[1]/10 +  self.state[2])  # Penalty for relative metrics
         reward += self.state[3]/10  # reward for drone speed
@@ -168,11 +168,15 @@ class Environment:
         if not self.state[-1]:  # No line-of-sight penalty
             reward -= 50
         if milestone:           # reached a milestone reward
-            reward += 100
+            reward += 50
         if is_done:
-            reward += 200
+            if self.state[0] <= 1:   # vehicle also reached final destination
+                reward += 200
+            else:
+                reward += 50
+                is_done = False
 
-        return reward
+        return reward, is_done
 
     def get_state(self):
         state_vec, state_dict = get_state_vector(self.drone, self.car, self.planner)
@@ -192,12 +196,13 @@ class Episode:
         self.values = []
         self.log_probs = []
 
-    def add_experience(self, experience):
+    def add_experience(self, experience, log=True):
         self.experiences.append(experience)
         self.rewards.append(experience.reward)
         self.values.append(experience.value)
         self.log_probs.append(experience.log_probs)
-        self.log(experience)
+        if log:
+            self.log(experience)
 
     def log(self, experience):
         self.logger.info(json.dumps(experience.as_dict()))
@@ -218,7 +223,7 @@ class Episode:
 
 
 class Experience:
-    def __init__(self, state, action, reward, next_state, value, log_probs, episode):
+    def __init__(self, state, action, reward, next_state, value, log_probs, episode, drone_pose, car_pose):
         self.episode = episode
         self.state = state   # [
         self.action = action
@@ -226,13 +231,18 @@ class Experience:
         self.next_state = next_state
         self.value = value
         self.log_probs = log_probs
+        self.drone_pose = drone_pose
+        self.car_pose = car_pose
 
     def as_dict(self):
         return {'episode': self.episode,
                 'state': self.state,
                 'action': self.action,
                 'reward': float(round(self.reward, 2)),
-                'next_state': self.next_state}
+                'next_state': self.next_state,
+                'value': float(round(self.value, 3)),
+                'drone_pose': self.drone_pose.tolist(),
+                'car_pose': self.car_pose.tolist()}
 
 
 # def a2c(env):

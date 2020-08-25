@@ -16,7 +16,7 @@ import json
 from abc import ABC, abstractmethod
 from path_planner import *
 from squaternion import Quaternion
-
+import matplotlib.pyplot as plt
 
 class AbstractClassGetNextVec(ABC):
     @abstractmethod
@@ -231,7 +231,7 @@ def get_state_vector(drone, car, planner=None):
     drone_orientation = Quaternion(*drone.kinematics_estimated.orientation.to_numpy_array())
     car_orientation = Quaternion(*car.kinematics_estimated.orientation.to_numpy_array())
 
-    relative_dist = drone.kinematics_estimated.position.distance_to(car.kinematics_estimated.position)
+    relative_dist = drone.kinematics_estimated.position.distance_to(car.kinematics_estimated.position) - 4  # subtract height bias
     relative_vel = drone.kinematics_estimated.linear_velocity.distance_to(car.kinematics_estimated.linear_velocity)
 
     relative_heading = calc_relative_heading(drone_euler=drone_orientation.to_euler(degrees=True),
@@ -253,8 +253,7 @@ def get_state_vector(drone, car, planner=None):
 def setup_logger(name, dir_name, log_file, level=logging.INFO):
     """To setup as many loggers as you want"""
     # formatter = logging.Formatter('%(asctime)s,%(name)s,%(levelname)s,%(message)s')
-    formatter = logging.Formatter("{'time':'%(asctime)s', 'name': '%(name)s',"
-                                  "'level': '%(levelname)s', 'message': '%(message)s'}"
+    formatter = logging.Formatter('{"time":"%(asctime)s", "name": "%(name)s","level": "%(levelname)s", "message": %(message)s}'
     )
     if not os.path.exists(f'./{dir_name}/'):
         os.makedirs(f'./{dir_name}/')
@@ -269,19 +268,3 @@ def setup_logger(name, dir_name, log_file, level=logging.INFO):
     logger.addHandler(handler)
 
     return logger
-
-
-class EpisodeParser:
-    def __init__(self,dir_path, time_interval):
-        self.path = dir_path
-        self.interval = time_interval
-        self.episodes = []
-
-    def load_episodes(self):
-        files = os.listdir(self.path)
-        print(files)
-        for file in files:
-            with open(os.path.join(self.path, file)) as episode:
-                self.episodes.append(json.loads(episode))
-                print(self.episodes[-1])
-
