@@ -22,18 +22,19 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
 
     # --- send vehicle and drone to initial positions (random at each game/episode) ------------------------------
     drone.move(pos, yaw)
-    car.move(pos, yaw, offset_x=-4)
+    car.move(pos, yaw)
 
     # ------------------------------------------------------------------------------------------------------------
     env = Environment(init_pose=pos, drone=drone, car=car, planner=planner, goals=goals)
 
-    state = env.reset(pos, yaw)
+    state = env.reset(pos, yaw, offset_car=[-5, 0])
+
     print('Init state:', state)
 
     # --- Load models -------------------------------------------------------------------------------------------
 
     trainer = Trainer(env)
-    a2c, optimizer = trainer.load_a2c()
+    a2c, optimizer = trainer.load_a2c(load=True)
 
     # --- Start Game ---------------------------------------------------------------------------------------------
     total_entropy = 0
@@ -56,14 +57,13 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
         print('Action taken:', action)
         new_state, reward, done, _ = env.step(env.action_space.action(action), delay=1)
 
-        episode.add_experience(Experience(state, action, reward, new_state, value, log_prob, episode.uuid))
+        episode.add_experience(Experience(state, action, reward, new_state, value, log_prob, episode.uuid, drone.current_pose, car.current_pose))
 
         if done:
             print('Target reached.')
-            episode.logger.info(json.dumps({'episode': episode.uuid, 'state':'target_reached'}))
-            count_down -= 1
-            if not count_down:
-                break
+            episode.logger.info(json.dumps({'episode': episode.uuid, 'state': 'target_reached'}))
+            # count_down -= 1
+            break
 
         state = new_state
 
