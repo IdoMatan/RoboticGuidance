@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 from graph import *
 from shapely.geometry import LineString
 import cv2
-
+import json
+import random
 
 def calc_angle_cost(P1,P2,P3):
     if sum(abs(P1-P3)) == 0:
@@ -17,6 +18,13 @@ def calc_angle_cost(P1,P2,P3):
         angle = 0
 
     return abs(angle)*180/np.pi
+
+
+def get_angle_param(filename):
+    with open(filename, 'r') as file:
+        message = json.load(file)
+    file.close()
+    return int(message['max_angle'])
 
 
 class PathPlanner:
@@ -206,9 +214,9 @@ def generate_nodes(map_lim, obstacles, x_init, x_goal, n_points=100):
     return nodes
 
 
-def path_planning(map_lim=[-128, 128, -72, 72],  # map_lim=np.array([(-500, 500), (-200, 200)]),  #  dimensions of Search Space
+def path_planning(map_lim=[-120, 120, -120, 120],  # map_lim=np.array([(-500, 500), (-200, 200)]),  #  dimensions of Search Space
                   x_init=(0, 0),                                # starting location
-                  x_goal=(0, 90),                            # goal location
+                  x_goal='random',                            # goal location
                   n_points=50,                               # Number of random nodes
                   obstacles=None,                                 # obstacles
                   safety_factor=0,                              # length of smallest edge to check for intersection with obstacles
@@ -222,7 +230,8 @@ def path_planning(map_lim=[-128, 128, -72, 72],  # map_lim=np.array([(-500, 500)
     if method == 'smooth':
         # obstacles = PathPlanningObstacles(obstacles, safety_factor)
         obstacles.update_safety_factor(safety_factor)
-
+        if x_goal == 'random':
+            x_goal = (120, 30)
         nodes = generate_nodes(map_lim=map_lim, obstacles=obstacles, x_init=x_init, x_goal=x_goal, n_points=n_points)
 
         graph = Graph(nodes, obstacles, smoothness)
@@ -251,7 +260,8 @@ def path_planning(map_lim=[-128, 128, -72, 72],  # map_lim=np.array([(-500, 500)
         X = SearchSpace(np.array([(map_lim[0], map_lim[1]), (map_lim[2], map_lim[3])]))
         obstacle_generator(obstacles.obstacles, X)
 
-        max_allowed_angle = 35
+        max_allowed_angle = get_angle_param('planning_params.json')
+
         Q = np.array([(8, 4, 5)])  # length of tree edges
         r = 1  # length of smallest edge to check for intersection with obstacles
         max_samples = 5024  # max number of samples to take before timing out
@@ -262,6 +272,14 @@ def path_planning(map_lim=[-128, 128, -72, 72],  # map_lim=np.array([(-500, 500)
         best_cost = 100000
         best_distance = 100000
         rrt = None
+
+        if x_goal == 'random':
+            while 1:
+                viable_x = np.concatenate((np.arange(map_lim[0], map_lim[0] + 30), np.arange(map_lim[1] - 30, map_lim[1])))
+                viable_y = np.concatenate((np.arange(map_lim[2], map_lim[2] + 30), np.arange(map_lim[3] - 30, map_lim[3])))
+                x_goal = (int(np.random.choice(viable_x)), int(np.random.choice(viable_y)))
+                if X.obstacle_free(x_goal):
+                    break
 
         for episode in range(5):
 
@@ -285,5 +303,6 @@ def path_planning(map_lim=[-128, 128, -72, 72],  # map_lim=np.array([(-500, 500)
         plot.plot_obstacles(X, obstacles.obstacles)
         plot.plot_start(X, x_init)
         plot.plot_goal(X, x_goal)
-        plot.draw(auto_open=True)
-        return path, rrt
+        plot.draw(auto_open=False)
+
+        return best_path, rrt
