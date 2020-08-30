@@ -1,22 +1,13 @@
-
 import setup_path
 import airsim
 import logging
-import numpy as np
-import time
 import os
-import pprint
-import tempfile
 import math
 from math import *
 import imageio
-import json
-# import cv2
-
 from abc import ABC, abstractmethod
 from path_planner import *
 from squaternion import Quaternion
-import matplotlib.pyplot as plt
 
 class AbstractClassGetNextVec(ABC):
     @abstractmethod
@@ -212,14 +203,15 @@ def find_corners(filename, proportion_x=1, proportion_y=1, tmp_dir="airsim_drone
     return obstacles
 
 
-def calc_relative_heading(drone_euler, car_euler):
-    yaw_drone = drone_euler[2] if drone_euler[2] < 180 else drone_euler[2] - 180
-    yaw_car = car_euler[0] if car_euler[0] < 180 else car_euler[0] - 180
-
-    return abs(yaw_car - yaw_drone)
+def calc_relative_heading(drone_heading, car_heading):
+    return abs(car_heading - drone_heading)
 
 
 def get_state_vector(drone, car, planner=None):
+    '''
+    Get drone and car state vectors
+    NOTE: heading will be calculated later on as for the drone its a deriviate of its last position
+    '''
     drone = drone.client.getMultirotorState(drone.name)
     car = car.client.getCarState(car.name)
     state_dict = {}
@@ -231,20 +223,23 @@ def get_state_vector(drone, car, planner=None):
     drone_orientation = Quaternion(*drone.kinematics_estimated.orientation.to_numpy_array())
     car_orientation = Quaternion(*car.kinematics_estimated.orientation.to_numpy_array())
 
-    relative_dist = drone.kinematics_estimated.position.distance_to(car.kinematics_estimated.position) - 4  # subtract height bias
+    height_bias = abs(drone_pose[2]-car_pose[2])
+
+    relative_dist = drone.kinematics_estimated.position.distance_to(car.kinematics_estimated.position) - height_bias  # subtract height bias
     relative_vel = drone.kinematics_estimated.linear_velocity.distance_to(car.kinematics_estimated.linear_velocity)
 
-    relative_heading = calc_relative_heading(drone_euler=drone_orientation.to_euler(degrees=True),
-                                             car_euler=car_orientation.to_euler(degrees=True))
+    # relative_heading = calc_relative_heading(drone_euler=drone_orientation.to_euler(degrees=True),
+    #                                          car_euler=car_orientation.to_euler(degrees=True))
 
     drone_speed = np.linalg.norm(drone_vel)
+
     try:
         los = 1 if planner.X.collision_free(drone_pose[:2], car_pose[:2], planner.r) else 0
     except Exception:
         print('planner not defined yet')
         los = -1
 
-    state_vec = [relative_dist, relative_vel, relative_heading, float(drone_speed), los]
+    state_vec = [relative_dist, relative_vel, None, float(drone_speed), los]
     state_dict['drone'] = {'pose': drone_pose, 'velocity': drone_vel, 'orientation': drone_orientation}
     state_dict['car'] = {'pose': car_pose, 'velocity': car_vel, 'orientation': car_orientation}
     return state_vec, state_dict
@@ -253,8 +248,7 @@ def get_state_vector(drone, car, planner=None):
 def setup_logger(name, dir_name, log_file, level=logging.INFO):
     """To setup as many loggers as you want"""
     # formatter = logging.Formatter('%(asctime)s,%(name)s,%(levelname)s,%(message)s')
-    formatter = logging.Formatter('{"time":"%(asctime)s", "name": "%(name)s","level": "%(levelname)s", "message": %(message)s}'
-    )
+    formatter = logging.Formatter('{"time":"%(asctime)s", "name": "%(name)s","level": "%(levelname)s", "message": %(message)s}')
     if not os.path.exists(f'./{dir_name}/'):
         os.makedirs(f'./{dir_name}/')
 
@@ -268,3 +262,27 @@ def setup_logger(name, dir_name, log_file, level=logging.INFO):
     logger.addHandler(handler)
 
     return logger
+
+
+def adjust_planning_params(increase_by=0, limits=(20, 180)):
+    try:
+        # load old file
+        with open('planning_params.json', 'r') as file:
+            message = json.load(file)
+        file.close()
+
+        # Update param
+        if limits[0] < message['max_angle'] + increase_by <= limits[1]:
+            new_max_angle = message['max_angle'] + increase_by
+        else:
+            new_max_angle = message['max_angle']
+
+        # save new file
+        with open('planning_params.json', 'w') as file:
+            json.dump({"max_angle": new_max_angle, "keep_away": 0}, file)
+        file.close()
+
+        print(f'Changed planning param: max angle, from {message["max_angle"]} to {new_max_angle}')
+
+    except IOError:
+        print("Can't find file with planning params")

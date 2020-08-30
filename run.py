@@ -5,6 +5,7 @@ from ActorCritic import *
 from utils import *
 from vehicles import Car, Drone
 import json
+import time
 
 def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.98*2), hfov = radians(90), coll_thres=5, yaw=0,
               limit_yaw=5, step=0.1):
@@ -18,16 +19,17 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
     # --- Plan path to goal -------------------------------------------------------------------------------------
     topview, filename = get_topview_image(190, drone=drone)
     obstacles = PathPlanningObstacles(filename, proportion_x=1.6, proportion_y=1.6)
-    goals, planner = path_planning(obstacles=obstacles, topview=topview, x_goal=goal, x_init=pos[:2])
+    goals, planner = path_planning(obstacles=obstacles, topview=topview, x_goal='random', x_init=pos[:2])
 
     # --- send vehicle and drone to initial positions (random at each game/episode) ------------------------------
-    drone.move(pos, yaw)
-    car.move(pos, yaw)
+    # drone.move(pos, yaw)
+    # car.move(pos, yaw)
 
     # ------------------------------------------------------------------------------------------------------------
     env = Environment(init_pose=pos, drone=drone, car=car, planner=planner, goals=goals)
 
-    state = env.reset(pos, yaw, offset_car=[-5, 0])
+    car_start_angle = 0 # np.arctan2(goals[1][0], goals[1][1])
+    state = env.reset(pos, yaw_car=float(round(car_start_angle, 2)), yaw_drone=yaw, offset_car=[-3, 0])
 
     print('Init state:', state)
 
@@ -38,7 +40,7 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
 
     # --- Start Game ---------------------------------------------------------------------------------------------
     total_entropy = 0
-    limit = 120
+    limit = 80
     count_down = 10
     done = False
 
@@ -54,7 +56,6 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
         entropy = -np.sum(np.mean(distribution) * np.log(distribution))
         total_entropy +=entropy
 
-        print('Action taken:', action)
         new_state, reward, done, _ = env.step(env.action_space.action(action), delay=1)
 
         episode.add_experience(Experience(state, action, reward, new_state, value, log_prob, episode.uuid, drone.current_pose, car.current_pose))
@@ -74,8 +75,10 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
         episode.logger.info(json.dumps({'episode': episode.uuid, 'state': 'final_target_reached'}))
 
     print('Running training phase')
-    trainer.train(episode, state, total_entropy)
+    losses = trainer.train(episode, state, total_entropy)
     trainer.save_model()
+
+    logger.info(json.dumps(losses))
 
     # drone.client.simSetVehiclePose(airsim.Pose(airsim.Vector3r(0, 0, 0), airsim.to_quaternion(0, 0, 0)), True)
 

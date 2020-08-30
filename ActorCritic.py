@@ -1,14 +1,9 @@
-import time
-import sys
-import torch
-import numpy as np
-import torch.nn as nn
 import torch.optim as optim
-import torch.nn.functional as F
 from torch.autograd import Variable
 from ResNet import *
 from utils import *
 import json
+import time
 
 # TODO make hyperparameters as a json_config file
 hidden_size = 256
@@ -93,6 +88,27 @@ class Trainer:
         self.optimizer.zero_grad()
         ac_loss.backward()
         self.optimizer.step()
+        self.update_planning_smoothness(episode)
+        return {'actor_loss': float(actor_loss.detach()), 'critic_loss': float(critic_loss.detach()), 'ac_loss': float(ac_loss.detach())}
+
+    def update_planning_smoothness(self, episode):
+        max_TH = 4
+        min_TH = 2
+        step = 2
+
+        following_score = 0
+        for experience in episode.experiences:
+            following_score += abs(experience.next_state[0]) - 4   # subtract height bias
+
+        following_score /= len(episode.experiences)
+        print(f' <> Following score: {following_score} <>')
+
+        if following_score > max_TH:
+            adjust_planning_params(increase_by=-step)
+        elif following_score < min_TH:
+            adjust_planning_params(increase_by=step)
+        else:
+            print('following behavior in tolerance, keeping max_angle the same')
 
     def save_model(self, filename='guidance_model.pth'):
         torch.save({'model': self.actor_critic,
@@ -120,14 +136,14 @@ class Environment:
         self.car = car
         self.car_current_position = init_pose
         self.planner = planner
-        self.goals = [(goal[1], goal[0]) for goal in goals]
+        self.goals = [(round(goal[1],2), round(goal[0],2)) for goal in goals]
         self.current_goal = self.goals.pop(0)
         self.drone.current_goal = self.current_goal
         self.dt = 0
 
-    def reset(self, pose, yaw, offset_car=(0,0), offset_drone=(0,0)):
-        self.drone.move(pose, yaw, offset_x=offset_drone[0], offset_y=offset_drone[1])
-        self.car.move(pose, yaw, offset_x=offset_car[0], offset_y=offset_car[1])
+    def reset(self, pose, yaw_car, yaw_drone=0, offset_car=(0, 0), offset_drone=(0, 0)):
+        self.drone.move(pose, yaw=yaw_drone, offset_x=offset_drone[0], offset_y=offset_drone[1])
+        self.car.move(pose, yaw=yaw_car, offset_x=offset_car[0], offset_y=offset_car[1])
 
         self.state = self.get_state()
         return self.state
@@ -162,7 +178,7 @@ class Environment:
 
         reward = -self.dt    # accumulating penalty
 
-        reward -= (self.state[0] + self.state[1]/10 +  self.state[2])  # Penalty for relative metrics
+        reward -= (self.state[0] + self.state[1]/10 + self.state[2])  # Penalty for relative metrics
         reward += self.state[3]/10  # reward for drone speed
 
         if not self.state[-1]:  # No line-of-sight penalty
@@ -170,7 +186,7 @@ class Environment:
         if milestone:           # reached a milestone reward
             reward += 50
         if is_done:
-            if self.state[0] <= 1:   # vehicle also reached final destination
+            if self.state[0] <= 2:   # vehicle also reached final destination
                 reward += 200
             else:
                 reward += 50
@@ -180,9 +196,16 @@ class Environment:
 
     def get_state(self):
         state_vec, state_dict = get_state_vector(self.drone, self.car, self.planner)
-        self.drone.current_pose = state_dict['drone']['pose']
-        self.car.current_pose = state_dict['car']['pose']
-        print(f'Drone pose: {self.drone.current_pose}, Car pose: {self.car.current_pose}')
+
+        self.drone.update_pose(state_dict['drone']['pose'])
+        self.car.update_pose(state_dict['car']['pose'])
+
+        # Update relative heading:
+        relative_angle = calc_relative_heading(self.drone.heading, self.car.heading)
+        state_vec[2] = log(relative_angle) if relative_angle > 0 else relative_angle
+
+        print(f' ->>>>> Drone position: {self.drone.current_pose}, heading: {self.drone.heading}')
+        print(f' ->>>>> Car positione: {self.car.current_pose}, heading: {self.car.heading}, realtive: {relative_angle}')
         return state_vec
 
 
@@ -225,7 +248,7 @@ class Episode:
 class Experience:
     def __init__(self, state, action, reward, next_state, value, log_probs, episode, drone_pose, car_pose):
         self.episode = episode
-        self.state = state   # [
+        self.state = state
         self.action = action
         self.reward = reward
         self.next_state = next_state
@@ -243,114 +266,3 @@ class Experience:
                 'value': float(round(self.value, 3)),
                 'drone_pose': self.drone_pose.tolist(),
                 'car_pose': self.car_pose.tolist()}
-
-
-# def a2c(env):
-#     num_inputs = env.observation_space.shape[0]
-#     num_outputs = env.action_space.n
-#
-#     load = False
-#     if load:
-#         loaded = torch.load('actor_critic.pth')
-#         actor_critic = loaded['model']
-#         actor_critic.load_state_dict(loaded['model_state_dict'])
-#         ac_optimizer = optim.Adam(actor_critic.parameters(), lr=learning_rate)
-#         ac_optimizer.load_state_dict(loaded['optimizer_state_dict'])
-#     else:
-#         actor_critic = ActorCritic(num_inputs, num_outputs, hidden_size)
-#         ac_optimizer = optim.Adam(actor_critic.parameters(), lr=learning_rate)
-#
-#     all_lengths = []
-#     average_lengths = []
-#     all_rewards = []
-#     # entropy_term = 0
-#
-#     for episode in range(max_episodes):
-#         log_probs = []
-#         entropy_term = 0
-#         values = []
-#         rewards = []
-#
-#         if episode == max_episodes - 1:
-#             env.print_on_map()
-#         state = env.reset()
-#         for steps in range(num_steps):
-#             value, policy_dist = actor_critic.forward(state)
-#             value = value.detach().numpy()[0, 0]
-#             dist = policy_dist.detach().numpy()
-#
-#             dist = (dist + 0.1) / (np.sum(dist + 0.1))  # todo: delete?????????
-#
-#             try:
-#                 action = np.random.choice(num_outputs, p=np.squeeze(dist))
-#             except ValueError:
-#                 action = np.random.randint(4)
-#
-#             log_prob = torch.log(policy_dist.squeeze(0)[action])
-#             entropy = -np.sum(np.mean(dist) * np.log(dist))
-#             new_state, reward, done, _ = env.step(action)
-#
-#             rewards.append(reward)
-#             values.append(value)
-#             log_probs.append(log_prob)
-#             if entropy > 1000:
-#                 print("test")
-#             entropy_term += entropy
-#             state = new_state
-#
-#             if done or steps == num_steps - 1:
-#                 Qval, _ = actor_critic.forward(new_state)
-#                 Qval = Qval.detach().numpy()[0, 0]
-#                 all_rewards.append(np.sum(rewards))
-#                 all_lengths.append(steps)
-#                 average_lengths.append(np.mean(all_lengths[-10:]))
-#                 if episode % 10 == 0:
-#                     sys.stdout.write("episode: {}, reward: {}, total length: {}, average length: {} \n"
-#                                      .format(episode, np.sum(rewards), steps, average_lengths[-1]))
-#                 break
-#
-#         # compute Q values
-#         Qvals = np.zeros_like(values)
-#         for t in reversed(range(len(rewards))):
-#             Qval = rewards[t] + GAMMA * Qval
-#             Qvals[t] = Qval
-#
-#         # update actor critic
-#         values = torch.FloatTensor(values)
-#         Qvals = torch.FloatTensor(Qvals)
-#         log_probs = torch.stack(log_probs)
-#
-#         if log_probs.sum().abs() > 10000 or entropy_term > 10000:
-#             print('size_error')
-#
-#         advantage = Qvals - values
-#         actor_loss = (-log_probs * advantage).mean()
-#         critic_loss = 0.5 * advantage.pow(2).mean()
-#         ac_loss = actor_loss + critic_loss + 0.001 * entropy_term
-#
-#         ac_optimizer.zero_grad()
-#         ac_loss.backward()
-#         ac_optimizer.step()
-#
-#     # Plot results
-#     smoothed_rewards = pd.Series.rolling(pd.Series(all_rewards), 10).mean()
-#     smoothed_rewards = [elem for elem in smoothed_rewards]
-#     plt.plot(all_rewards)
-#     plt.plot(smoothed_rewards)
-#     plt.plot()
-#     plt.xlabel('Episode')
-#     plt.ylabel('Reward')
-#     plt.show()
-#
-#     plt.plot(all_lengths)
-#     plt.plot(average_lengths)
-#     plt.xlabel('Episode')
-#     plt.ylabel('Episode length')
-#     plt.show()
-#
-#     plt.imshow(env.map, cmap='gray')
-#     plt.show()
-#
-#     if not load:
-#         torch.save({'model': actor_critic, 'model_state_dict': actor_critic.state_dict(),
-#                     'optimizer_state_dict': ac_optimizer.state_dict()}, 'actor_critic.pth')
