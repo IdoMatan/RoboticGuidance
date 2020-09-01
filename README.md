@@ -43,9 +43,15 @@ both drone and car simultaneously so needs to be slighly modified to allow it.
 ---
 ## Results
 - A sample episode of the training phase. One of the first things the drone learned was to slow down if the car is far away
-![reward_graph]()
-- ADD GIF
-- ADD 10 SEC movie
+
+![reward_graph](https://github.com/IdoMatan/RoboticGuidance/blob/master/images/RewardGraph.jpeg)
+- A short gif of a sample run (5x speed)
+
+![episode_gif](https://github.com/IdoMatan/RoboticGuidance/blob/master/images/GuidanceSample.gif)
+
+- Trajectory GIF:
+
+![trajectory_gif](https://github.com/IdoMatan/RoboticGuidance/blob/master/images/example.gif)
 
 
 ---
