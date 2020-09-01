@@ -2,14 +2,14 @@
 ### Images template
 # JPEG
 *.jpg
-*.jpeg
+#*.jpeg
 *.jpe
 *.jif
 *.jfif
 *.jfi
 
 # Graphics Interchange Format
-*.gif
+test.gif
 
 # RAW
 *.raw
@@ -84,3 +84,5 @@ cmake-build-*/
 *.json
 *.pyc
 *.pth
+
+test.py
