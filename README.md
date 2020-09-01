@@ -5,15 +5,15 @@
 
 > Final Project in Technion Course 096235 - Intelligent Interactive Systems
 ---
-
+![drone_and_car](https://github.com/IdoMatan/RoboticGuidance/blob/master/images/airsim_1.png)
+---
 ## Table of Contents
 
 - [Dependencies](#dependencies)
 - [Installation](#installation)
-- [Playing a Game](#playing_a_game)
-- [Display results](#display_results)
-- [Contributing](#contributing)
-- [Team](#team)
+- [Playing a Game](#Playing a Game)
+- [Display results](#Display Results)
+- [Results](#results)
 - [License](#license)
 
 ---
@@ -45,11 +45,11 @@ both drone and car simultaneously so needs to be slighly modified to allow it.
 - A sample episode of the training phase. One of the first things the drone learned was to slow down if the car is far away
 
 ![reward_graph](https://github.com/IdoMatan/RoboticGuidance/blob/master/images/RewardGraph.jpeg)
-- A short gif of a sample run (5x speed)
+- A short gif of a training run (5x speed)
 
 ![episode_gif](https://github.com/IdoMatan/RoboticGuidance/blob/master/images/GuidanceSample.gif)
 
-- Trajectory GIF:
+- Trajectory plot (drone in red, car in blue)
 
 ![trajectory_gif](https://github.com/IdoMatan/RoboticGuidance/blob/master/images/example.gif)
 

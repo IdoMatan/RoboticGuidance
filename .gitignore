@@ -18,7 +18,7 @@ test.gif
 *.webp
 
 # Portable Network Graphics
-*.png
+#*.png
 
 # Tagged Image File Format
 *.tiff

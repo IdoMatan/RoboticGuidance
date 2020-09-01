@@ -136,7 +136,7 @@ class EpisodeParser:
 
         def update(i):
             ax.plot(drone_traj[:i,1], drone_traj[:i,0], '-r', label='Drone')
-            ax.plot(car_traj[:i,1], car_traj[:i,0],'-b', label='Car')
+            ax.plot(car_traj[:i,1], car_traj[:i,0], '-b', label='Car')
             ax.set_title(f'Time {i}', fontsize=20)
             # ax.legend()
             ax.set_axis_off()
