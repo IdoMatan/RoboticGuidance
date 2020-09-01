@@ -7,6 +7,7 @@ from vehicles import Car, Drone
 import json
 import time
 
+
 def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.98*2), hfov = radians(90), coll_thres=5, yaw=0,
               limit_yaw=5, step=0.1):
 
@@ -79,8 +80,6 @@ def play_game(logger, uuid, pos=(0, 0, -1), goal=(120, 35), uav_size=(0.29*3, 0.
     trainer.save_model()
 
     logger.info(json.dumps(losses))
-
-    # drone.client.simSetVehiclePose(airsim.Pose(airsim.Vector3r(0, 0, 0), airsim.to_quaternion(0, 0, 0)), True)
 
 
 # ---- MAIN ---------------------------------------------------------

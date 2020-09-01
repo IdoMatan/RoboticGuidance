@@ -130,7 +130,7 @@ class EpisodeParser:
         ax[4].set_title('Average Speed')
         ax[4].legend()
 
-    def create_gif(self, episode):
+    def create_gif(self, episode, name='test'):
         print('Creating GIF')
         fig, ax = plt.subplots(figsize=(10, 5))
 
@@ -144,5 +144,5 @@ class EpisodeParser:
         drone_traj = np.array(self.episodes[episode]['traj_drone'])
         car_traj = np.array(self.episodes[episode]['traj_car'])
         anim = FuncAnimation(fig, update, frames=np.arange(0, len(drone_traj)), interval=200)
-        anim.save('test.gif', dpi=80, writer='imagemagick')
+        anim.save(name+'.gif', dpi=80, writer='imagemagick')
         plt.close()
