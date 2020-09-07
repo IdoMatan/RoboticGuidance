@@ -81,7 +81,7 @@ cmake-build-*/
 .idea/vcs.xml
 .html
 *.html
-*.json
+
 *.pyc
 *.pth
 

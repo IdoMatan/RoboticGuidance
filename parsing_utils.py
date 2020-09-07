@@ -98,6 +98,7 @@ class EpisodeParser:
         critic_loss = []
         avg_drone_speed = []
         avg_car_speed = []
+        episode_len = []
 
         for episode in self.episodes:
             avg_reward.append(np.mean(episode['episode_obj'].rewards))
@@ -105,30 +106,40 @@ class EpisodeParser:
             sum_reward.append(sum(episode['episode_obj'].rewards))
             avg_drone_speed.append(np.mean([row[3] for row in episode['states']]))
             avg_car_speed.append(np.mean([abs(row[3]-row[1]) for row in episode['states']]))
+            episode_len.append(len(episode['episode_obj'].rewards))
 
             if episode['losses']:
                 ac_loss.append(episode.get('losses').get('ac_loss'))
                 actor_loss.append(episode.get('losses').get('actor_loss'))
                 critic_loss.append(episode.get('losses').get('critic_loss'))
 
-        fig, ax = plt.subplots(5)
+        fig, ax = plt.subplots(6)
         fig.suptitle('Training summary')
 
-        ax[0].plot(avg_reward)
+        ax[0].plot(avg_reward, label='Avg reward')
         ax[0].set_title('Avg reward')
-        ax[1].plot(final_reward)
+        # ax[0].plot(episode_len, label='Episode length')
+        # ax[0].legend()
+
+        ax[1].plot(final_reward, label='Final reward')
         ax[1].set_title('final reward')
+
         ax[2].plot(sum_reward)
         ax[2].set_title('sum_reward')
+
         ax[3].plot(ac_loss, label='AC-Loss')
         ax[3].plot(actor_loss, label='Actor loss')
         ax[3].plot(critic_loss, label='Critic loss')
         ax[3].set_title('Losses')
         ax[3].legend()
+
         ax[4].plot(avg_drone_speed, label='Drone')
         ax[4].plot(avg_car_speed, label='Car')
         ax[4].set_title('Average Speed')
         ax[4].legend()
+
+        ax[5].plot(episode_len, label='Episode length')
+        ax[5].set_title('Episode length')
 
     def create_gif(self, episode, name='test'):
         print('Creating GIF')
