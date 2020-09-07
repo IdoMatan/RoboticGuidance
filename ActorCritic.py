@@ -199,6 +199,7 @@ class Environment:
 
         self.drone.update_pose(state_dict['drone']['pose'])
         self.car.update_pose(state_dict['car']['pose'])
+        self.car.update_pose(state_dict['car']['pose'])
 
         # Update relative heading:
         relative_angle = calc_relative_heading(self.drone.heading, self.car.heading)

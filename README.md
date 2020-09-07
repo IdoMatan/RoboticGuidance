@@ -11,8 +11,8 @@
 
 - [Dependencies](#dependencies)
 - [Installation](#installation)
-- [Playing a Game](#Playing a Game)
-- [Display results](#Display Results)
+- [Playing a Game](#playing-a-game)
+- [Display results](#display-results)
 - [Results](#results)
 - [License](#license)
 
@@ -23,10 +23,10 @@
 
 ---
 ## Installation
-> Microsoft AirSim - unfortunately setting this up is a bit of a hassle as the Airsim current release doesnt support
+> unfortunately setting Microsoft AirSim up is a bit of a hassle as the Airsim current release doesnt support
 both drone and car simultaneously so needs to be slighly modified to allow it.
 - Follow [this medium guide](https://medium.com/@idoglanz/setting-up-microsoft-airsim-to-simulate-a-drone-and-car-together-708079b2d0f?sk=a31cfc18e2fe1948874bc0dadd80c182) to setup the AirSim with both a drone and a car
-- Clone [this repo](https://github.com/IdoMatan/RoboticGuidance.git)
+- Clone [this repo](https://github.com/IdoMatan/RoboticGuidance.git) to the same parent folder of the Airsim plugin
 - If using Conda, create an environment using `conda env create -f airsim_env.yaml`
 
 ---
